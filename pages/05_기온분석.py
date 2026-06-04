@@ -7,16 +7,18 @@ st.set_page_config(page_title="서울 기온 그래프", layout="centered")
 st.title("🌤️ 서울 최고기온 · 최저기온 그래프")
 st.write("날짜를 선택하면 해당 날짜의 최고기온과 최저기온을 선 그래프로 보여줘요.")
 
-# CSV 파일 불러오기
 df = pd.read_csv("seoul.csv", encoding="cp949")
 
-# 날짜 변환
-df["날짜"] = pd.to_datetime(df["날짜"])
+df.columns = df.columns.str.strip()
 
-# 필요한 컬럼만 사용
+df["날짜"] = pd.to_datetime(df["날짜"], errors="coerce")
+df = df.dropna(subset=["날짜"])
+
+df["최고기온(℃)"] = pd.to_numeric(df["최고기온(℃)"], errors="coerce")
+df["최저기온(℃)"] = pd.to_numeric(df["최저기온(℃)"], errors="coerce")
+
 df = df[["날짜", "최고기온(℃)", "최저기온(℃)"]].dropna()
 
-# 날짜 선택
 selected_date = st.date_input(
     "날짜를 선택하세요",
     value=df["날짜"].min().date(),
@@ -26,7 +28,6 @@ selected_date = st.date_input(
 
 selected_date = pd.to_datetime(selected_date)
 
-# 선택한 날짜 데이터 찾기
 selected_data = df[df["날짜"] == selected_date]
 
 if selected_data.empty:
@@ -35,16 +36,17 @@ else:
     max_temp = selected_data["최고기온(℃)"].values[0]
     min_temp = selected_data["최저기온(℃)"].values[0]
 
-    graph_df = pd.DataFrame({
+    chart_df = pd.DataFrame({
         "구분": ["최저기온", "최고기온"],
-        "기온": [min_temp, max_temp]
+        "최저기온": [min_temp, None],
+        "최고기온": [None, max_temp]
     })
 
     fig, ax = plt.subplots(figsize=(7, 5))
 
     ax.plot(
-        graph_df["구분"],
-        graph_df["기온"],
+        chart_df["구분"],
+        chart_df["최고기온"],
         marker="o",
         linewidth=3,
         markersize=10,
@@ -53,9 +55,10 @@ else:
     )
 
     ax.plot(
-        ["최저기온"],
-        [min_temp],
+        chart_df["구분"],
+        chart_df["최저기온"],
         marker="o",
+        linewidth=3,
         markersize=10,
         color="#AEEBFF",
         label="최저기온"
@@ -68,4 +71,5 @@ else:
 
     st.pyplot(fig)
 
-    st.info(f"🌡️ 최고기온: {max_temp}℃ / ❄️ 최저기온: {min_temp}℃")
+    st.success(f"🌡️ 최고기온: {max_temp}℃")
+    st.info(f"❄️ 최저기온: {min_temp}℃")
