@@ -4,16 +4,26 @@ import plotly.express as px
 
 st.set_page_config(page_title="어린이보호구역 CCTV 분석", layout="wide")
 
-st.title("🚸 전국 어린이보호구역 CCTV 설치 분석")
-st.write("지역을 선택하면 시군구별 CCTV 설치 비율과 설치 현황을 확인할 수 있어요.")
+st.title("🚸 전국 어린이보호구역 CCTV 분석")
+st.write("지역을 선택하면 CCTV 설치 비율과 설치 현황을 확인할 수 있어요.")
 
 @st.cache_data
 def load_data():
     df = pd.read_csv("전국어린이보호구역표준데이터 (1).csv", encoding="cp949")
 
-    df["주소"] = df["소재지도로명주소"].fillna(df["소재지지번주소"])
-    df["시도"] = df["주소"].str.split().str[0]
-    df["시군구"] = df["주소"].str.split().str[1]
+    df["주소"] = (
+        df["소재지도로명주소"]
+        .fillna(df["소재지지번주소"])
+        .fillna("")
+    )
+
+    df["시도"] = df["주소"].apply(
+        lambda x: str(x).split()[0] if len(str(x).split()) > 0 else "기타"
+    )
+
+    df["시군구"] = df["주소"].apply(
+        lambda x: str(x).split()[1] if len(str(x).split()) > 1 else "기타"
+    )
 
     df["CCTV설치여부"] = df["CCTV설치여부"].fillna("N")
     df["CCTV설치대수"] = pd.to_numeric(df["CCTV설치대수"], errors="coerce").fillna(0)
@@ -24,7 +34,11 @@ df = load_data()
 
 st.sidebar.header("🔍 선택 메뉴")
 
-regions = sorted(df["시도"].dropna().unique())
+regions = sorted([
+    r for r in df["시도"].dropna().unique()
+    if str(r).strip() != ""
+])
+
 selected_region = st.sidebar.selectbox("지역 선택", regions)
 
 facility_list = ["전체"] + sorted(df["시설종류"].dropna().unique())
@@ -95,8 +109,7 @@ fig.update_layout(
     yaxis_title="CCTV 설치 비율 (%)",
     xaxis_title="시군구",
     yaxis=dict(range=[0, 110]),
-    height=600,
-    font=dict(size=14)
+    height=600
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -115,8 +128,7 @@ fig2.update_layout(
     template="plotly_white",
     xaxis_title="시군구",
     yaxis_title="개수",
-    height=600,
-    font=dict(size=14)
+    height=600
 )
 
 st.plotly_chart(fig2, use_container_width=True)
@@ -169,9 +181,6 @@ show_columns = [
 
 real_columns = [col for col in show_columns if col in region_df.columns]
 
-st.dataframe(
-    region_df[real_columns],
-    use_container_width=True
-)
+st.dataframe(region_df[real_columns], use_container_width=True)
 
 st.caption("데이터 출처: 전국어린이보호구역표준데이터")
