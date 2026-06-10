@@ -41,11 +41,12 @@ no = (region_df["CCTV설치여부"] == "N").sum()
 rate = round(yes / total * 100, 1) if total > 0 else 0
 cctv_count = int(region_df["CCTV설치대수"].sum())
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("전체 보호구역", f"{total:,}개")
 c2.metric("CCTV 설치", f"{yes:,}개")
 c3.metric("CCTV 미설치", f"{no:,}개")
 c4.metric("설치 비율", f"{rate}%")
+c5.metric("총 CCTV 대수", f"{cctv_count:,}대")
 
 st.divider()
 
@@ -102,10 +103,8 @@ st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("📌 CCTV 설치 / 미설치 비교")
 
-compare_df = summary.sort_values("보호구역수", ascending=False)
-
 fig2 = px.bar(
-    compare_df,
+    summary.sort_values("보호구역수", ascending=False),
     x="시군구",
     y=["CCTV설치수", "CCTV미설치수"],
     barmode="group",
@@ -127,7 +126,7 @@ st.subheader("🏆 CCTV 설치 비율 TOP 10")
 top10 = summary.head(10)
 
 fig3 = px.bar(
-    top10,
+    top10.sort_values("CCTV설치비율"),
     x="CCTV설치비율",
     y="시군구",
     orientation="h",
@@ -151,12 +150,27 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width=True)
 
-st.subheader("📋 분석 데이터표")
+st.subheader("📋 시군구별 분석 데이터")
 st.dataframe(summary, use_container_width=True)
 
 st.subheader("🗺️ 선택 지역 원본 데이터")
+
+show_columns = [
+    "대상시설명",
+    "시설종류",
+    "주소",
+    "CCTV설치여부",
+    "CCTV설치대수",
+    "위도",
+    "경도",
+    "관리기관명",
+    "데이터기준일자"
+]
+
+real_columns = [col for col in show_columns if col in region_df.columns]
+
 st.dataframe(
-    region_df[["시설명", "시설종류", "주소", "CCTV설치여부", "CCTV설치대수", "위도", "경도"]],
+    region_df[real_columns],
     use_container_width=True
 )
 
